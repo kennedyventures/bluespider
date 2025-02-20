@@ -6,14 +6,38 @@ app = Flask(__name__)
 BLUESKY_API = "https://bsky.social/xrpc"
 
 import json
+import os
+import requests
+
+BLUESKY_API = "https://bsky.social/xrpc"
+
+def get_auth_token():
+    """ Authenticate with Bluesky and get an access token """
+    login_url = f"{BLUESKY_API}/com.atproto.server.createSession"
+    credentials = {
+        "identifier": os.getenv("BSKY_USERNAME"),
+        "password": os.getenv("BSKY_APP_PASSWORD")
+    }
+    response = requests.post(login_url, json=credentials)
+
+    if response.status_code == 200:
+        return response.json().get("accessJwt")
+    else:
+        print(f"Bluesky login failed: {response.text}")
+        return None
 
 def fetch_lists(user_handle):
-    """ Fetch public lists from a Bluesky user and print full response for debugging """
+    """ Fetch public lists from a Bluesky user with authentication """
+    auth_token = get_auth_token()
+    if not auth_token:
+        return {"error": "Failed to authenticate with Bluesky"}
+
     url = f"{BLUESKY_API}/app.bsky.graph.getLists?actor={user_handle}"
-    response = requests.get(url)
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    response = requests.get(url, headers=headers)
 
     print(f"Fetching lists for {user_handle}: Status {response.status_code}")
-    print(f"Full Response: {response.text}")  # Log full response
+    print(f"Full Response: {response.text}")
 
     if response.status_code == 200:
         try:
@@ -22,6 +46,7 @@ def fetch_lists(user_handle):
             print("Error decoding JSON response from Bluesky")
             return []
     return []
+
 
 
 @app.route('/')
