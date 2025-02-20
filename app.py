@@ -5,13 +5,24 @@ app = Flask(__name__)
 
 BLUESKY_API = "https://bsky.social/xrpc"
 
+import json
+
 def fetch_lists(user_handle):
-    """ Fetch public lists from a Bluesky user """
+    """ Fetch public lists from a Bluesky user and print full response for debugging """
     url = f"{BLUESKY_API}/app.bsky.graph.getLists?actor={user_handle}"
     response = requests.get(url)
+
+    print(f"Fetching lists for {user_handle}: Status {response.status_code}")
+    print(f"Full Response: {response.text}")  # Log full response
+
     if response.status_code == 200:
-        return response.json().get("lists", [])
+        try:
+            return response.json().get("lists", [])
+        except json.JSONDecodeError:
+            print("Error decoding JSON response from Bluesky")
+            return []
     return []
+
 
 @app.route('/')
 def home():
